@@ -24,7 +24,7 @@ func InboxTestCases(t *testing.T) {
 
 	t.Run("should return unauthorized when request does not have public key in header", func(t *testing.T) {
 		// Arrange
-		request, newReqErr := http.NewRequest(http.MethodGet, BaseInboxPath, nil)
+		request, newReqErr := http.NewRequest(http.MethodPost, BaseInboxPath, nil)
 
 		// Act
 		client := &http.Client{}
@@ -38,7 +38,7 @@ func InboxTestCases(t *testing.T) {
 
 	t.Run("should return bad request when user send bad request body", func(t *testing.T) {
 		// Arrange
-		request, newReqErr := http.NewRequest(http.MethodGet, BaseInboxPath, nil)
+		request, newReqErr := http.NewRequest(http.MethodPost, BaseInboxPath, nil)
 		request.Header.Add("x-public-key", "test")
 
 		// Act
@@ -59,7 +59,7 @@ func InboxTestCases(t *testing.T) {
 		}
 		requestBodyByte, marshalErr := json.Marshal(requestBody)
 		payLoad := strings.NewReader(string(requestBodyByte))
-		request, newReqErr := http.NewRequest(http.MethodGet, BaseInboxPath, payLoad)
+		request, newReqErr := http.NewRequest(http.MethodPost, BaseInboxPath, payLoad)
 		request.Header.Add("x-public-key", "test")
 
 		// Act
@@ -86,7 +86,7 @@ func InboxTestCases(t *testing.T) {
 		badQueryParams := "?page=heehee&limit=ow"
 		apiPath := BaseInboxPath + badQueryParams
 		payLoad := strings.NewReader(string(requestBodyByte))
-		request, _ := http.NewRequest(http.MethodGet, apiPath, payLoad)
+		request, _ := http.NewRequest(http.MethodPost, apiPath, payLoad)
 		request.Header.Add("x-public-key", testAccount.GetAddress())
 
 		// Act
@@ -110,7 +110,7 @@ func InboxTestCases(t *testing.T) {
 		queryParams := "?page=1&limit=10"
 		apiPath := BaseInboxPath + queryParams
 		payLoad := strings.NewReader(string(requestBodyByte))
-		request, newReqErr := http.NewRequest(http.MethodGet, apiPath, payLoad)
+		request, newReqErr := http.NewRequest(http.MethodPost, apiPath, payLoad)
 		request.Header.Add("x-public-key", testAccount.GetAddress())
 
 		// Act
@@ -146,9 +146,9 @@ func InboxTestCases(t *testing.T) {
 		apiPath := BaseInboxPath + queryParams
 		payLoad1 := strings.NewReader(string(requestBodyByte))
 		payLoad2 := strings.NewReader(string(requestBodyByte))
-		request1, newReqErr1 := http.NewRequest(http.MethodGet, apiPath, payLoad1)
+		request1, newReqErr1 := http.NewRequest(http.MethodPost, apiPath, payLoad1)
 		request1.Header.Add("x-public-key", testAccount.GetAddress())
-		request2, newReqErr2 := http.NewRequest(http.MethodGet, apiPath, payLoad2)
+		request2, newReqErr2 := http.NewRequest(http.MethodPost, apiPath, payLoad2)
 		request2.Header.Add("x-public-key", testAccount.GetAddress())
 
 		// Act
@@ -188,7 +188,7 @@ func InboxTestCases(t *testing.T) {
 		queryParams := "?page=1&limit=10"
 		apiPath := BaseInboxPath + queryParams
 		payLoad := strings.NewReader(string(requestBodyByte))
-		request, newReqErr := http.NewRequest(http.MethodGet, apiPath, payLoad)
+		request, newReqErr := http.NewRequest(http.MethodPost, apiPath, payLoad)
 		request.Header.Add("x-public-key", testAccount.GetAddress())
 
 		// Act

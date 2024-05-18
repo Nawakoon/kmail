@@ -70,7 +70,9 @@ func TestServer(t *testing.T) {
 		assert.Equal(t, "OK\n", string(body))
 	})
 
-	// t.Run("should handle /mail/inbox", InboxTestCases)
+	t.Run("should handle /mail/inbox", InboxTestCases)
 
 	t.Run("should handle /mail/send", SendMailTestCases)
+
+	t.Run("should handle /mail", ReadMailTestCases)
 }

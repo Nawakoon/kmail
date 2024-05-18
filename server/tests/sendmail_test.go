@@ -28,7 +28,7 @@ func SendMailTestCases(t *testing.T) {
 
 	t.Run("should return unauthorized when request does not have public key in header", func(t *testing.T) {
 		// Arrange
-		request, newReqErr := http.NewRequest(http.MethodGet, SendMailPath, nil)
+		request, newReqErr := http.NewRequest(http.MethodPost, SendMailPath, nil)
 
 		// Act
 		client := &http.Client{}
@@ -43,7 +43,7 @@ func SendMailTestCases(t *testing.T) {
 	t.Run("should return unauthorized when public key in header is invalid", func(t *testing.T) {
 		// Arrange
 		badPublicKeyHeader := "bad key heehee! ow!"
-		request, newReqErr := http.NewRequest(http.MethodGet, SendMailPath, nil)
+		request, newReqErr := http.NewRequest(http.MethodPost, SendMailPath, nil)
 		request.Header.Add("x-public-key", badPublicKeyHeader)
 
 		// Act
@@ -197,7 +197,7 @@ func SendMailTestCases(t *testing.T) {
 		queryParams := "?page=1&limit=10"
 		apiPath := InboxPath + queryParams
 		readMailPayLoad := strings.NewReader(string(readMailRequestBodyByte))
-		readMailRequest, _ := http.NewRequest(http.MethodGet, apiPath, readMailPayLoad)
+		readMailRequest, _ := http.NewRequest(http.MethodPost, apiPath, readMailPayLoad)
 		readMailRequest.Header.Add("x-public-key", receivedAccount.GetAddress())
 		readMailResponse, _ := client.Do(readMailRequest)
 		readMailBytes, _ := io.ReadAll(readMailResponse.Body)

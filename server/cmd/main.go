@@ -26,7 +26,7 @@ func main() {
 	// routes
 	http.HandleFunc("/health", mailHandler.HealthCheck)
 	http.HandleFunc("/mail/inbox", mailHandler.GetInbox)
-	http.HandleFunc("/mail/inbox/", mailHandler.GetMail)
+	http.HandleFunc("/mail/", mailHandler.GetMail)
 	http.HandleFunc("/mail/send", mailHandler.SendMail)
 
 	log.Printf("Server is running on port %s\n", PORT)

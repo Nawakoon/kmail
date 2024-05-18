@@ -1,0 +1,10 @@
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+CREATE TABLE IF NOT EXISTS mail (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    recipient VARCHAR(128) NOT NULL,
+    sender VARCHAR(128) NOT NULL,
+    mail_subject TEXT NOT NULL,
+    body TEXT NOT NULL,
+    sent_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);

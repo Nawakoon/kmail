@@ -22,6 +22,27 @@ func InboxTestCases(t *testing.T) {
 		TestPrivateKey = "1baa694c49154f63b1503c7138f184c80f221670f035403ff428a65183bab247"
 	)
 
+	t.Run("should allowed only post request", func(t *testing.T) {
+		// Arrange
+		getRequest, _ := http.NewRequest(http.MethodGet, BaseInboxPath, nil)
+		putRequest, _ := http.NewRequest(http.MethodPut, BaseInboxPath, nil)
+		deleteRequest, _ := http.NewRequest(http.MethodDelete, BaseInboxPath, nil)
+		postRequest, _ := http.NewRequest(http.MethodPost, BaseInboxPath, nil)
+
+		// Act
+		client := &http.Client{}
+		getResponse, _ := client.Do(getRequest)
+		putResponse, _ := client.Do(putRequest)
+		deleteResponse, _ := client.Do(deleteRequest)
+		postResponse, _ := client.Do(postRequest)
+
+		// Assert
+		assert.Equal(t, http.StatusMethodNotAllowed, getResponse.StatusCode)
+		assert.Equal(t, http.StatusMethodNotAllowed, putResponse.StatusCode)
+		assert.Equal(t, http.StatusMethodNotAllowed, deleteResponse.StatusCode)
+		assert.NotEqual(t, http.StatusMethodNotAllowed, postResponse.StatusCode)
+	})
+
 	t.Run("should return unauthorized when request does not have public key in header", func(t *testing.T) {
 		// Arrange
 		request, newReqErr := http.NewRequest(http.MethodPost, BaseInboxPath, nil)

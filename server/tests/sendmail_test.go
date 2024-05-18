@@ -26,6 +26,27 @@ func SendMailTestCases(t *testing.T) {
 		TestPrivateKey3 = "923cebb3d8809d3caf09faa74ae2a39c23824a6fe75c44cab2a73dc6a0f3b606"
 	)
 
+	t.Run("should allowed only post request", func(t *testing.T) {
+		// Arrange
+		getRequest, _ := http.NewRequest(http.MethodGet, SendMailPath, nil)
+		putRequest, _ := http.NewRequest(http.MethodPut, SendMailPath, nil)
+		deleteRequest, _ := http.NewRequest(http.MethodDelete, SendMailPath, nil)
+		postRequest, _ := http.NewRequest(http.MethodPost, SendMailPath, nil)
+
+		// Act
+		client := &http.Client{}
+		getResponse, _ := client.Do(getRequest)
+		putResponse, _ := client.Do(putRequest)
+		deleteResponse, _ := client.Do(deleteRequest)
+		postResponse, _ := client.Do(postRequest)
+
+		// Assert
+		assert.Equal(t, http.StatusMethodNotAllowed, getResponse.StatusCode)
+		assert.Equal(t, http.StatusMethodNotAllowed, putResponse.StatusCode)
+		assert.Equal(t, http.StatusMethodNotAllowed, deleteResponse.StatusCode)
+		assert.NotEqual(t, http.StatusMethodNotAllowed, postResponse.StatusCode)
+	})
+
 	t.Run("should return unauthorized when request does not have public key in header", func(t *testing.T) {
 		// Arrange
 		request, newReqErr := http.NewRequest(http.MethodPost, SendMailPath, nil)

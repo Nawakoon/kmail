@@ -29,12 +29,20 @@ func NewHandler(service mail.MailService) MailHandler {
 }
 
 func (h *Handler) HealthCheck(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
 	w.WriteHeader(http.StatusOK)
 	fmt.Printf("Request received from %s\n", r.RemoteAddr)
 	fmt.Fprintln(w, "OK")
 }
 
 func (h *Handler) GetInbox(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
 	// validate public key in header
 	publicKey := r.Header.Get("x-public-key")
 	if publicKey == "" {
@@ -103,6 +111,10 @@ func (h *Handler) GetMail(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) SendMail(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
 	// validate public key in header
 	hexPublicKey := r.Header.Get("x-public-key")
 	if hexPublicKey == "" {

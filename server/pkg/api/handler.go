@@ -6,9 +6,12 @@ import (
 	"net/http"
 	"passwordless-mail-client/pkg/account"
 	"strconv"
+	"time"
 
 	mail "passwordless-mail-server/pkg/mail"
 	"passwordless-mail-server/pkg/model"
+
+	"github.com/google/uuid"
 )
 
 type Handler struct {
@@ -105,9 +108,79 @@ func (h *Handler) GetInbox(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) GetMail(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusOK)
-	fmt.Println("get mail called")
-	fmt.Fprintln(w, "get mail in-progress")
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	userAddress := r.Header.Get("x-public-key")
+	if userAddress == "" {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	// validate public key
+	publicKey, err := account.HexToPublicKey(userAddress)
+	if err != nil {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	// validate request body
+	body := model.RequestBody{}
+	err = json.NewDecoder(r.Body).Decode(&body)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// validate message
+	var message map[string]interface{}
+	err = json.Unmarshal([]byte(body.Data), &message)
+	if err != nil {
+		fmt.Println("err", err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	_, err = uuid.Parse(message["email_id"].(string))
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	_, err = uuid.Parse(message["id"].(string))
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	_, err = time.Parse(time.RFC3339, message["timestamp"].(string))
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	result, err := h.service.GetMail(body, publicKey, userAddress)
+	if err == nil {
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(result)
+		return
+	}
+	if err.Error() == "validation failed" ||
+		err.Error() == "uuid is already used" ||
+		err.Error() == "message timeout" {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+	if err.Error() == "bad request" {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	if err.Error() == "mail not found" {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	w.WriteHeader(http.StatusInternalServerError)
 }
 
 func (h *Handler) SendMail(w http.ResponseWriter, r *http.Request) {

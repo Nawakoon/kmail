@@ -58,19 +58,19 @@ func NewGetInbox() ([]byte, error) {
 	return inbox, nil
 }
 
-func NewGetEmail() ([]byte, error) {
+func NewGetEmail(id uuid.UUID) ([]byte, error) {
 	getEmail := GetEmailRequest{
 		ID:        uuid.New(),
 		Timestamp: time.Now().Format(time.RFC3339),
-		EmailID:   uuid.New(),
+		EmailID:   id,
 	}
 
-	strJSON, err := json.Marshal(getEmail)
+	message, err := json.Marshal(getEmail)
 	if err != nil {
 		return nil, err
 	}
 
-	return strJSON, nil
+	return message, nil
 }
 
 func NewSendEmail(recipient string, subject string, body string) ([]byte, error) {

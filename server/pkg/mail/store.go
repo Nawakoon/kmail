@@ -15,7 +15,7 @@ type StoreGetInboxQuery struct {
 
 type MailStore interface {
 	GetInbox(query StoreGetInboxQuery) ([]model.MailEntity, error)
-	GetMail()
+	GetMail(id uuid.UUID, user string) (*model.MailEntity, error)
 	InsertMail(mail model.Mail) (*model.MailEntity, error)
 }
 
@@ -57,7 +57,20 @@ func (s *Store) GetInbox(query StoreGetInboxQuery) ([]model.MailEntity, error) {
 	return inbox, nil
 }
 
-func (s *Store) GetMail() {
+func (s *Store) GetMail(id uuid.UUID, user string) (*model.MailEntity, error) {
+	queryScript := `
+		SELECT * FROM mail
+		WHERE id = $1
+		AND (recipient = $2 OR sender = $2)
+	`
+
+	var mail model.MailEntity
+	err := s.db.QueryRow(queryScript, id, user).Scan(&mail.ID, &mail.Recipient, &mail.Sender, &mail.MailSubject, &mail.Body, &mail.SentAt)
+	if err != nil {
+		return nil, err
+	}
+
+	return &mail, nil
 }
 
 func (s *Store) InsertMail(mail model.Mail) (*model.MailEntity, error) {

@@ -19,7 +19,7 @@ type ServiceGetInboxQuery struct {
 
 type MailService interface {
 	GetInbox(request model.RequestBody, publicKey *ecdsa.PublicKey, query ServiceGetInboxQuery) (model.InboxResponse, error)
-	GetMail()
+	GetMail(request model.RequestBody, publicKey *ecdsa.PublicKey, user string) (model.Mail, error)
 	SendMail(request model.RequestBody, publicKey *ecdsa.PublicKey) (model.SendMailResponse, error)
 }
 
@@ -109,7 +109,60 @@ func (s *Service) GetInbox(
 	return inboxResponse, nil
 }
 
-func (s *Service) GetMail() {
+func (s *Service) GetMail(payload model.RequestBody, publicKey *ecdsa.PublicKey, user string) (model.Mail, error) {
+	const TIMEOUT = time.Duration(3 * time.Minute)
+
+	isVerify := account.Verify(
+		publicKey,
+		[]byte(payload.Data),
+		[]byte(payload.Signature),
+	)
+	if !isVerify {
+		return model.Mail{}, fmt.Errorf("validation failed")
+	}
+
+	var message request.GetEmailRequest
+	err := json.Unmarshal([]byte(payload.Data), &message)
+	if err != nil {
+		return model.Mail{}, fmt.Errorf("internal server error")
+	}
+
+	timestamp, err := time.Parse(time.RFC3339, message.Timestamp)
+	if err != nil {
+		return model.Mail{}, fmt.Errorf("bad request")
+	}
+	isTimeout := time.Since(timestamp) > TIMEOUT
+	if isTimeout {
+		return model.Mail{}, fmt.Errorf("message timeout")
+	}
+
+	usedUUID, err := s.uuidStore.GetUsedUUID(message.ID)
+	if err != nil {
+		return model.Mail{}, err
+	}
+	if usedUUID != nil {
+		return model.Mail{}, fmt.Errorf("uuid is already used")
+	}
+	err = s.uuidStore.InsertUsedUUID(message.ID)
+	if err != nil {
+		return model.Mail{}, err
+	}
+
+	mail, err := s.mailStore.GetMail(message.EmailID, user)
+	if err == nil {
+		return model.Mail{
+			ID:      mail.ID,
+			From:    mail.Sender,
+			To:      mail.Recipient,
+			Subject: mail.MailSubject,
+			Body:    mail.Body,
+		}, nil
+	}
+	if err.Error() == "sql: no rows in result set" {
+		return model.Mail{}, fmt.Errorf("mail not found")
+	}
+
+	return model.Mail{}, nil
 }
 
 func (s *Service) SendMail(

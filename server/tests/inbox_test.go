@@ -2,11 +2,13 @@ package server_test
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"passwordless-mail-client/pkg/account"
 	"passwordless-mail-client/pkg/request"
 	"passwordless-mail-server/pkg/model"
+	"passwordless-mail-server/pkg/util"
 	"strings"
 	"testing"
 	"time"
@@ -18,9 +20,50 @@ import (
 func InboxTestCases(t *testing.T) {
 
 	const (
-		BaseInboxPath  = "http://localhost:8080/mail/inbox"
-		TestPrivateKey = "1baa694c49154f63b1503c7138f184c80f221670f035403ff428a65183bab247"
+		BaseInboxPath   = "http://localhost:8080/mail/inbox"
+		TestPrivateKey1 = "1baa694c49154f63b1503c7138f184c80f221670f035403ff428a65183bab247"
+		TestPrivateKey2 = "fd778940ddae63e19e5d2a05604a4d0eaec18b977801299a7f54aa95e33cbec2"
 	)
+
+	insertTestMails := func(
+		senderAcc account.Account,
+		recipientAcc account.Account,
+		amount int,
+	) error {
+		if amount <= 0 {
+			return fmt.Errorf("amount should be greater than 0")
+		}
+
+		database, err := util.NewTestDatabase()
+		if err != nil {
+			return err
+		}
+
+		// prepare mails
+		recipient := recipientAcc.GetAddress()
+		sender := senderAcc.GetAddress()
+		var mails []model.MailEntity
+		for i := 0; i < amount; i++ {
+			mail := model.MailEntity{
+				Recipient:   recipient,
+				Sender:      sender,
+				MailSubject: fmt.Sprintf("subject-%d", i+1),
+				Body:        fmt.Sprintf("body-%d", i+1),
+			}
+			mails = append(mails, mail)
+		}
+
+		// insert mails to database
+		queryScript := "INSERT INTO mail (recipient, sender, mail_subject, body) VALUES ($1, $2, $3, $4)"
+		for _, mail := range mails {
+			_, err := database.DB.Exec(queryScript, mail.Recipient, mail.Sender, mail.MailSubject, mail.Body)
+			if err != nil {
+				return err
+			}
+		}
+
+		return nil
+	}
 
 	t.Run("should allowed only post request", func(t *testing.T) {
 		// Arrange
@@ -96,7 +139,7 @@ func InboxTestCases(t *testing.T) {
 
 	t.Run("should return bad request when request contains invalid query params", func(t *testing.T) {
 		// Arrange
-		testAccount, _ := account.ConnectAccount(TestPrivateKey)
+		testAccount, _ := account.ConnectAccount(TestPrivateKey1)
 		message, _ := request.NewGetInbox()
 		signedMassage, _ := testAccount.Sign(message)
 		requestBody := model.RequestBody{
@@ -120,7 +163,7 @@ func InboxTestCases(t *testing.T) {
 
 	t.Run("should return ok and mail inbox when user send request correctly", func(t *testing.T) {
 		// Arrange
-		testAccount, connectErr := account.ConnectAccount(TestPrivateKey)
+		testAccount, connectErr := account.ConnectAccount(TestPrivateKey1)
 		message, newMsgErr := request.NewGetInbox()
 		signedMassage, signErr := testAccount.Sign(message)
 		requestBody := model.RequestBody{
@@ -153,9 +196,44 @@ func InboxTestCases(t *testing.T) {
 		assert.Equal(t, http.StatusOK, response.StatusCode)
 	})
 
+	// create 14 mails to this user and get inbox with limit 10
+	// should return 10 mails and total mail count is 14
+	t.Run("should return ok and correct total mail count when user request is correct", func(t *testing.T) {
+		// Arrange
+		recipientAcc, _ := account.ConnectAccount(TestPrivateKey1)
+		senderAcc, _ := account.ConnectAccount(TestPrivateKey2)
+		mockMailAmount := 14
+		insertMailErr := insertTestMails(*senderAcc, *recipientAcc, mockMailAmount)
+		message, newMsgErr := request.NewGetInbox()
+		signedMassage, signErr := recipientAcc.Sign(message)
+		requestBody := model.RequestBody{
+			Data:      string(message),
+			Signature: signedMassage,
+		}
+		requestBodyByte, marshalErr := json.Marshal(requestBody)
+		queryParams := "?page=1&limit=10"
+		apiPath := BaseInboxPath + queryParams
+		payLoad := strings.NewReader(string(requestBodyByte))
+		request, newReqErr := http.NewRequest(http.MethodPost, apiPath, payLoad)
+		request.Header.Add("x-public-key", recipientAcc.GetAddress())
+
+		// Act
+		client := &http.Client{}
+		response, sendReqErr := client.Do(request)
+		inboxBytes, readErr := io.ReadAll(response.Body)
+		inbox := model.InboxResponse{}
+		unmarshalErr := json.Unmarshal(inboxBytes, &inbox)
+
+		// Assert
+		util.AssertNoAnyError(t, insertMailErr, newMsgErr, signErr, marshalErr, newReqErr, sendReqErr, readErr, unmarshalErr)
+		assert.Equal(t, http.StatusOK, response.StatusCode)
+		assert.Equal(t, 10, len(inbox.Inbox))
+		assert.Equal(t, mockMailAmount, inbox.Total)
+	})
+
 	t.Run("should return unauthorize when request uuid is duplicate", func(t *testing.T) {
 		// Arrange
-		testAccount, connectErr := account.ConnectAccount(TestPrivateKey)
+		testAccount, connectErr := account.ConnectAccount(TestPrivateKey1)
 		message, newMsgErr := request.NewGetInbox()
 		signedMassage, signErr := testAccount.Sign(message)
 		requestBody := model.RequestBody{
@@ -192,7 +270,7 @@ func InboxTestCases(t *testing.T) {
 
 	t.Run("should return unauthorize when request contains timeout timestamp", func(t *testing.T) {
 		// Arrange
-		testAccount, connectErr := account.ConnectAccount(TestPrivateKey)
+		testAccount, connectErr := account.ConnectAccount(TestPrivateKey1)
 		last3minutes1second := time.Now().Add(-3 * time.Minute).Add(-1 * time.Second)
 		getInbox := request.GetInboxRequest{
 			ID:        uuid.New(),

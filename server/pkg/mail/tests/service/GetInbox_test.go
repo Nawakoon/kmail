@@ -29,6 +29,8 @@ func TestGetInbox(t *testing.T) {
 		mailService          mail.MailService
 		resMailStoreGetInbox []model.MailEntity
 		errMailStoreGetInbox error
+		resMailStoreGetTotal int
+		errMailStoreGetTotal error
 		resUUIDStoreGetUUID  *model.UsedUUIDEntity
 		errUUIDStoreGetUUID  error
 		errInsertUsedUUID    error
@@ -65,8 +67,10 @@ func TestGetInbox(t *testing.T) {
 		errInsertUsedUUID = nil
 
 		mockMailStore.On("GetInbox", mock.Anything).Return(resMailStoreGetInbox, errMailStoreGetInbox)
+		mockMailStore.On("GetTotalMailsReceived", mock.Anything).Return(resMailStoreGetTotal, errMailStoreGetTotal)
 		mockUUIDStore.On("GetUsedUUID", mock.Anything).Return(resUUIDStoreGetUUID, errUUIDStoreGetUUID)
 		mockUUIDStore.On("InsertUsedUUID", mock.Anything).Return(errInsertUsedUUID)
+
 	}
 
 	t.Run("should have correct inbox query", func(t *testing.T) {

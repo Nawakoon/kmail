@@ -102,9 +102,14 @@ func (s *Service) GetInbox(
 		})
 	}
 
+	total, err := s.mailStore.GetTotalMailsReceived(query.Recipient)
+	if err != nil {
+		return model.InboxResponse{}, err
+	}
+
 	inboxResponse := model.InboxResponse{
 		Inbox: parsedInbox,
-		Total: len(parsedInbox),
+		Total: total,
 	}
 	return inboxResponse, nil
 }

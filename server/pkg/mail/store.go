@@ -15,6 +15,7 @@ type StoreGetInboxQuery struct {
 
 type MailStore interface {
 	GetInbox(query StoreGetInboxQuery) ([]model.MailEntity, error)
+	GetTotalMailsReceived(user string) (int, error)
 	GetMail(id uuid.UUID, user string) (*model.MailEntity, error)
 	InsertMail(mail model.Mail) (*model.MailEntity, error)
 }
@@ -55,6 +56,21 @@ func (s *Store) GetInbox(query StoreGetInboxQuery) ([]model.MailEntity, error) {
 	}
 
 	return inbox, nil
+}
+
+func (s *Store) GetTotalMailsReceived(user string) (int, error) {
+	queryScript := `
+		SELECT COUNT(*) FROM mail
+		WHERE recipient = $1
+	`
+
+	var total int
+	err := s.db.QueryRow(queryScript, user).Scan(&total)
+	if err != nil {
+		return 0, err
+	}
+
+	return total, nil
 }
 
 func (s *Store) GetMail(id uuid.UUID, user string) (*model.MailEntity, error) {

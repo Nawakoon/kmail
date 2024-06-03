@@ -77,6 +77,34 @@ func (_m *MailStore) GetMail(id uuid.UUID, user string) (*model.MailEntity, erro
 	return r0, r1
 }
 
+// GetTotalMailsReceived provides a mock function with given fields: user
+func (_m *MailStore) GetTotalMailsReceived(user string) (int, error) {
+	ret := _m.Called(user)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetTotalMailsReceived")
+	}
+
+	var r0 int
+	var r1 error
+	if rf, ok := ret.Get(0).(func(string) (int, error)); ok {
+		return rf(user)
+	}
+	if rf, ok := ret.Get(0).(func(string) int); ok {
+		r0 = rf(user)
+	} else {
+		r0 = ret.Get(0).(int)
+	}
+
+	if rf, ok := ret.Get(1).(func(string) error); ok {
+		r1 = rf(user)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // InsertMail provides a mock function with given fields: _a0
 func (_m *MailStore) InsertMail(_a0 model.Mail) (*model.MailEntity, error) {
 	ret := _m.Called(_a0)
